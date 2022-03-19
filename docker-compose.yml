@@ -1,0 +1,10 @@
+version: "3.7"
+services:
+  db:
+    image: postgres:14
+    environment:
+      POSTGRES_DATABASE: bogglr
+      POSTGRES_USER: bogglr
+      POSTGRES_PASSWORD: bogglr  # TODO: use a secret
+    ports:
+      - "5432:5432"

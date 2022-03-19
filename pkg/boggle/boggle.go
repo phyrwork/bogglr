@@ -1,6 +1,58 @@
-package game
+package boggle
+
+const (
+	X = 0
+	Y = 1
+)
 
 type Board [][]rune // Y, X
+
+func (b Board) Dims() (int, []int) {
+	h := len(b)
+	w := make([]int, h)
+	for i, r := range b {
+		w[i] = len(r)
+	}
+	return h, w
+}
+
+func (b Board) IsRect() bool {
+	_, r := b.Dims()
+	if len(r) == 0 {
+		return true
+	}
+	w := r[0]
+	for i := 1; i < len(r); i++ {
+		if r[i] != w {
+			return false
+		}
+	}
+	return true
+}
+
+func (b Board) Size() [2]int {
+	h, r := b.Dims()
+	wmax := 0
+	for _, w := range r {
+		if w > wmax {
+			wmax = w
+		}
+	}
+	return [2]int{wmax, h}
+}
+
+func (b Board) Tiles() []rune {
+	_, rn := b.Dims()
+	n := 0
+	for _, w := range rn {
+		n += w
+	}
+	s := make([]rune, 0, n)
+	for _, r := range b {
+		s = append(s, r...)
+	}
+	return s
+}
 
 type Point [2]int
 

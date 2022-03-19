@@ -1,4 +1,4 @@
-package game
+package boggle
 
 import (
 	"github.com/stretchr/testify/assert"
