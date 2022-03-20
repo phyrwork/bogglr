@@ -27,17 +27,32 @@ func TestMain(m *testing.M) {
 	dsn := os.Getenv("TEST_DATABASE_DSN")
 	if db, err = Open(dsn); err != nil {
 		log.Print(errors.Wrap(err, "error opening database"))
+		db = nil
 	}
 	if db == nil && os.Getenv("CI") != "" {
 		log.Fatal("database not available in CI build")
 	}
-	WithRollback(db, func(tx *DB) {
-		if err = Migrate(tx); err != nil {
-			log.Fatal(errors.Wrap(err, "error migrating database"))
-		}
-		db = tx
+	// Either I haven't understood it properly or there's a possible
+	// bug in Gorm - opening a transaction with DB.Begin() yields a
+	// transaction *DB that cannot be used to open a nested transaction.
+	//
+	// Nested DB.Transaction() based on the root *DB seem to work fine
+	// though, which we can use to achieve the same thing while still
+	// supporting skipping database-based tests when it is not available
+	// albeit a less elegant .
+	if db != nil {
+		WithRollback(db, func(tx *DB) {
+			if tx != nil {
+				if err = Migrate(tx); err != nil {
+					log.Fatal(errors.Wrap(err, "error migrating database"))
+				}
+				db = tx
+			}
+			m.Run()
+		})
+	} else {
 		m.Run()
-	})
+	}
 }
 
 func TestCreateGame_OK(t *testing.T) {
