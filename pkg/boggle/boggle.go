@@ -41,19 +41,6 @@ func (b Board) Size() [2]int {
 	return [2]int{wmax, h}
 }
 
-func (b Board) Tiles() []rune {
-	_, rn := b.Dims()
-	n := 0
-	for _, w := range rn {
-		n += w
-	}
-	s := make([]rune, 0, n)
-	for _, r := range b {
-		s = append(s, r...)
-	}
-	return s
-}
-
 type Point [2]int
 
 func (p Point) X() int {

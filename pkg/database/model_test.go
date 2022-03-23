@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/phyrwork/bogglr/pkg/boggle"
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 	"log"
 	"os"
 	"testing"
@@ -59,17 +60,65 @@ func TestCreateGame_OK(t *testing.T) {
 	if db == nil {
 		t.Skip("database not available")
 	}
+
 	board := boggle.Board{
 		{'a', 'b', 'c', 'd'},
 		{'e', 'f', 'g', 'h'},
 		{'i', 'j', 'k', 'l'},
 		{'m', 'n', 'o', 'p'},
 	}
+	var game Game
+	game.LoadBoard(board)
+
 	ctx := context.Background()
 	WithRollback(db, func(tx *DB) {
-		_, err := CreateGame(ctx, db, board)
-		if err != nil {
-			t.Fatal(errors.Wrap(err, "create game error"))
+		result := db.WithContext(ctx).Create(&game)
+		assert.Nil(t, result.Error)
+	})
+}
+
+func TestCreateGame_BoardTooLargeRows(t *testing.T) {
+	if db == nil {
+		t.Skip("database not available")
+	}
+
+	cardinality := 16
+	board := make(boggle.Board, cardinality+1)
+	for i := 0; i < cardinality+1; i++ {
+		board[i] = make([]rune, cardinality)
+		for j := range board[i] {
+			board[i][j] = '0' + rune(j)%10
 		}
+	}
+	var game Game
+	game.LoadBoard(board)
+
+	ctx := context.Background()
+	WithRollback(db, func(tx *DB) {
+		result := tx.WithContext(ctx).Create(&game)
+		assert.ErrorContains(t, result.Error, "violates check")
+	})
+}
+
+func TestCreateGame_BoardTooLargeCols(t *testing.T) {
+	if db == nil {
+		t.Skip("database not available")
+	}
+
+	cardinality := 16
+	board := make(boggle.Board, cardinality)
+	for i := 0; i < cardinality; i++ {
+		board[i] = make([]rune, cardinality+1)
+		for j := range board[i] {
+			board[i][j] = '0' + rune(j)%10
+		}
+	}
+	var game Game
+	game.LoadBoard(board)
+
+	ctx := context.Background()
+	WithRollback(db, func(tx *DB) {
+		result := tx.WithContext(ctx).Create(&game)
+		assert.ErrorContains(t, result.Error, "value too long")
 	})
 }
