@@ -6,6 +6,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 
@@ -51,18 +52,52 @@ func (r *mutationResolver) CreateGame(ctx context.Context, board []string) (*mod
 	return &obj, nil
 }
 
-func (r *queryResolver) Games(ctx context.Context) ([]*model.Game, error) {
+func (r *queryResolver) Games(ctx context.Context, first *int, after *string) (*model.GamesConnection, error) {
+	qry := r.DB.WithContext(ctx)
+	if after != nil {
+		startCursor, err := strconv.Atoi(*after)
+		if err != nil {
+			return nil, fmt.Errorf("invalid start cursor %s: %w", *after, err)
+		}
+		qry = qry.Where("id > ?", startCursor)
+	}
+	if first != nil {
+		qry = qry.Limit(*first)
+	}
+	qry = qry.Order("id asc")
+
 	var records []database.Game
-	if err := r.DB.WithContext(ctx).Find(&records).Error; err != nil {
+	if err := qry.Find(&records).Error; err != nil {
 		return nil, fmt.Errorf("database error: %w", err)
 	}
-	objs := MapPointersOf(records, func(record database.Game) model.Game {
+	var edges []*model.Game = MapPointersOf(records, func(record database.Game) model.Game {
 		return model.Game{
 			ID:    strconv.Itoa(int(record.ID)),
 			Board: record.Board,
 		}
 	})
-	return objs, nil
+	if len(edges) == 0 {
+		return nil, nil
+	}
+
+	pageInfo := model.PageInfo{
+		StartCursor: edges[0].ID,
+		EndCursor:   edges[len(edges)-1].ID,
+	}
+	qry = r.DB.WithContext(ctx).
+		Where("id > ?", records[len(records)-1].ID).
+		Limit(1)
+	if err := qry.Find(&records).Error; err != nil {
+		log.Print(fmt.Errorf("database error: %w", err))
+	} else {
+		hasNextPage := len(records) > 0
+		pageInfo.HasNextPage = &hasNextPage
+	}
+
+	return &model.GamesConnection{
+		Edges:    edges,
+		PageInfo: &pageInfo,
+	}, nil
 }
 
 // Game returns generated.GameResolver implementation.

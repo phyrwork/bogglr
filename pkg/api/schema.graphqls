@@ -1,14 +1,26 @@
-# GraphQL schema example
-#
-# https://gqlgen.com/getting-started/
+type PageInfo {
+  startCursor: ID!
+  endCursor: ID!
+  hasNextPage: Boolean
+}
 
 type Game {
   id: ID!
   board: [String!]!
 }
 
+type GamesConnection {
+  edges: [Game!]!
+  pageInfo: PageInfo!
+}
+
+type GamesEdge {
+  cursor: ID!
+  node: Game
+}
+
 type Query {
-  games: [Game!]!
+  games(first: Int = 20, after: ID): GamesConnection
 }
 
 type Mutation {
