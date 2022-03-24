@@ -35,6 +35,7 @@ type Config struct {
 }
 
 type ResolverRoot interface {
+	Game() GameResolver
 	Mutation() MutationResolver
 	Query() QueryResolver
 }
@@ -43,17 +44,13 @@ type DirectiveRoot struct {
 }
 
 type ComplexityRoot struct {
-	Board struct {
-		Rows func(childComplexity int) int
-	}
-
 	Game struct {
 		Board func(childComplexity int) int
 		ID    func(childComplexity int) int
 	}
 
 	Mutation struct {
-		CreateGame func(childComplexity int, board model.NewBoard) int
+		CreateGame func(childComplexity int, board []string) int
 	}
 
 	Query struct {
@@ -61,8 +58,11 @@ type ComplexityRoot struct {
 	}
 }
 
+type GameResolver interface {
+	Board(ctx context.Context, obj *model.Game) ([]string, error)
+}
 type MutationResolver interface {
-	CreateGame(ctx context.Context, board model.NewBoard) (*model.Game, error)
+	CreateGame(ctx context.Context, board []string) (*model.Game, error)
 }
 type QueryResolver interface {
 	Games(ctx context.Context) ([]*model.Game, error)
@@ -82,13 +82,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	ec := executionContext{nil, e}
 	_ = ec
 	switch typeName + "." + field {
-
-	case "Board.rows":
-		if e.complexity.Board.Rows == nil {
-			break
-		}
-
-		return e.complexity.Board.Rows(childComplexity), true
 
 	case "Game.board":
 		if e.complexity.Game.Board == nil {
@@ -114,7 +107,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreateGame(childComplexity, args["board"].(model.NewBoard)), true
+		return e.complexity.Mutation.CreateGame(childComplexity, args["board"].([]string)), true
 
 	case "Query.games":
 		if e.complexity.Query.Games == nil {
@@ -191,17 +184,9 @@ var sources = []*ast.Source{
 #
 # https://gqlgen.com/getting-started/
 
-type Board {
-  rows: [String!]!
-}
-
-input NewBoard {
-  rows: [String!]!
-}
-
 type Game {
   id: ID!
-  board: Board!
+  board: [String!]!
 }
 
 type Query {
@@ -209,7 +194,7 @@ type Query {
 }
 
 type Mutation {
-  createGame(board: NewBoard!): Game!
+  createGame(board: [String!]!): Game!
 }
 `, BuiltIn: false},
 }
@@ -222,10 +207,10 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 func (ec *executionContext) field_Mutation_createGame_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 model.NewBoard
+	var arg0 []string
 	if tmp, ok := rawArgs["board"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("board"))
-		arg0, err = ec.unmarshalNNewBoard2githubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐNewBoard(ctx, tmp)
+		arg0, err = ec.unmarshalNString2ᚕstringᚄ(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -287,41 +272,6 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 
 // region    **************************** field.gotpl *****************************
 
-func (ec *executionContext) _Board_rows(ctx context.Context, field graphql.CollectedField, obj *model.Board) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:     "Board",
-		Field:      field,
-		Args:       nil,
-		IsMethod:   false,
-		IsResolver: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Rows, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]string)
-	fc.Result = res
-	return ec.marshalNString2ᚕstringᚄ(ctx, field.Selections, res)
-}
-
 func (ec *executionContext) _Game_id(ctx context.Context, field graphql.CollectedField, obj *model.Game) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -368,14 +318,14 @@ func (ec *executionContext) _Game_board(ctx context.Context, field graphql.Colle
 		Object:     "Game",
 		Field:      field,
 		Args:       nil,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Board, nil
+		return ec.resolvers.Game().Board(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -387,9 +337,9 @@ func (ec *executionContext) _Game_board(ctx context.Context, field graphql.Colle
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Board)
+	res := resTmp.([]string)
 	fc.Result = res
-	return ec.marshalNBoard2ᚖgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐBoard(ctx, field.Selections, res)
+	return ec.marshalNString2ᚕstringᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_createGame(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -417,7 +367,7 @@ func (ec *executionContext) _Mutation_createGame(ctx context.Context, field grap
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateGame(rctx, args["board"].(model.NewBoard))
+		return ec.resolvers.Mutation().CreateGame(rctx, args["board"].([]string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1726,29 +1676,6 @@ func (ec *executionContext) ___Type_specifiedByURL(ctx context.Context, field gr
 
 // region    **************************** input.gotpl *****************************
 
-func (ec *executionContext) unmarshalInputNewBoard(ctx context.Context, obj interface{}) (model.NewBoard, error) {
-	var it model.NewBoard
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	for k, v := range asMap {
-		switch k {
-		case "rows":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("rows"))
-			it.Rows, err = ec.unmarshalNString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
 // endregion **************************** input.gotpl *****************************
 
 // region    ************************** interface.gotpl ***************************
@@ -1756,37 +1683,6 @@ func (ec *executionContext) unmarshalInputNewBoard(ctx context.Context, obj inte
 // endregion ************************** interface.gotpl ***************************
 
 // region    **************************** object.gotpl ****************************
-
-var boardImplementors = []string{"Board"}
-
-func (ec *executionContext) _Board(ctx context.Context, sel ast.SelectionSet, obj *model.Board) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, boardImplementors)
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("Board")
-		case "rows":
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Board_rows(ctx, field, obj)
-			}
-
-			out.Values[i] = innerFunc(ctx)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
 
 var gameImplementors = []string{"Game"}
 
@@ -1806,18 +1702,28 @@ func (ec *executionContext) _Game(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = innerFunc(ctx)
 
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "board":
+			field := field
+
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Game_board(ctx, field, obj)
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Game_board(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
 			}
 
-			out.Values[i] = innerFunc(ctx)
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
 
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -2359,16 +2265,6 @@ func (ec *executionContext) ___Type(ctx context.Context, sel ast.SelectionSet, o
 
 // region    ***************************** type.gotpl *****************************
 
-func (ec *executionContext) marshalNBoard2ᚖgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐBoard(ctx context.Context, sel ast.SelectionSet, v *model.Board) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	return ec._Board(ctx, sel, v)
-}
-
 func (ec *executionContext) unmarshalNBoolean2bool(ctx context.Context, v interface{}) (bool, error) {
 	res, err := graphql.UnmarshalBoolean(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -2455,11 +2351,6 @@ func (ec *executionContext) marshalNID2string(ctx context.Context, sel ast.Selec
 		}
 	}
 	return res
-}
-
-func (ec *executionContext) unmarshalNNewBoard2githubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐNewBoard(ctx context.Context, v interface{}) (model.NewBoard, error) {
-	res, err := ec.unmarshalInputNewBoard(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {

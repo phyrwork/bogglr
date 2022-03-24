@@ -2,17 +2,9 @@
 #
 # https://gqlgen.com/getting-started/
 
-type Board {
-  rows: [String!]!
-}
-
-input NewBoard {
-  rows: [String!]!
-}
-
 type Game {
   id: ID!
-  board: Board!
+  board: [String!]!
 }
 
 type Query {
@@ -20,5 +12,5 @@ type Query {
 }
 
 type Mutation {
-  createGame(board: NewBoard!): Game!
+  createGame(board: [String!]!): Game!
 }

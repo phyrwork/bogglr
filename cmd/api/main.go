@@ -20,9 +20,14 @@ func main() {
 		port = defaultPort
 	}
 
-	db, err := database.Open("")
-	if err != nil {
+	var (
+		db  *database.DB
+		err error
+	)
+	if db, err = database.Open(""); err != nil {
 		log.Fatalf("database open error: %v", err)
+	} else if err = database.Migrate(db); err != nil {
+		log.Fatalf("database migrate error: %v", err)
 	}
 
 	resolver := api.Resolver{DB: db}
