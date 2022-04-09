@@ -122,3 +122,35 @@ func TestCreateGame_BoardTooLargeCols(t *testing.T) {
 		assert.ErrorContains(t, result.Error, "value too long")
 	})
 }
+
+func TestCreateWord(t *testing.T) {
+	if db == nil {
+		t.Skip("database not available")
+	}
+	ctx := context.Background()
+	WithRollback(db, func(tx *DB) {
+		board := boggle.Board{
+			{'a', 'b', 'c', 'd'},
+			{'e', 'f', 'g', 'h'},
+			{'i', 'j', 'k', 'l'},
+			{'m', 'n', 'o', 'p'},
+		}
+		var game Game
+		game.LoadBoard(board)
+		if result := db.WithContext(ctx).Create(&game); result.Error != nil {
+			t.Fatalf("create game error: %v", result.Error)
+		}
+
+		word := Word{
+			Game: &game,
+			Path: Path{{0, 0}, {1, 1}, {2, 2}},
+		}
+		if result := db.WithContext(ctx).Create(&word); result.Error != nil {
+			t.Fatalf("create word error: %v", result.Error)
+		}
+
+		if result := db.WithContext(ctx).Find(&word); result.Error != nil {
+			t.Fatalf("select word error: %v", result.Error)
+		}
+	})
+}
