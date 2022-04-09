@@ -40,7 +40,7 @@ func TestMain(m *testing.M) {
 	// Nested DB.Transaction() based on the root *DB seem to work fine
 	// though, which we can use to achieve the same thing while still
 	// supporting skipping database-based tests when it is not available
-	// albeit a less elegant .
+	// albeit less elegant.
 	if db != nil {
 		WithRollback(db, func(tx *DB) {
 			if tx != nil {
@@ -72,8 +72,9 @@ func TestCreateGame_OK(t *testing.T) {
 
 	ctx := context.Background()
 	WithRollback(db, func(tx *DB) {
-		result := db.WithContext(ctx).Create(&game)
-		assert.Nil(t, result.Error)
+		if result := db.WithContext(ctx).Create(&game); result.Error != nil {
+			t.Fatalf("create game error: %v", result.Error)
+		}
 	})
 }
 
@@ -141,16 +142,73 @@ func TestCreateWord(t *testing.T) {
 			t.Fatalf("create game error: %v", result.Error)
 		}
 
+		newWord := Word{
+			GameID: game.ID,
+			Path:   Path{{0, 0}, {1, 1}, {2, 2}},
+		}
+		if result := db.WithContext(ctx).Create(&newWord); result.Error != nil {
+			t.Fatalf("create newWord error: %v", result.Error)
+		}
+
+		selectedWord := Word{ID: newWord.ID}
+		if result := db.WithContext(ctx).Find(&selectedWord); result.Error != nil {
+			t.Fatalf("select newWord error: %v", result.Error)
+		}
+		assert.Equal(t, newWord.GameID, selectedWord.GameID)
+		assert.Equal(t, newWord.Path, selectedWord.Path)
+	})
+}
+
+func TestCreatePlayer(t *testing.T) {
+	if db == nil {
+		t.Skip("database not available")
+	}
+	ctx := context.Background()
+	WithRollback(db, func(tx *DB) {
+		player := Player{Name: "John Doe"}
+		if result := db.WithContext(ctx).Create(&player); result.Error != nil {
+			t.Fatalf("create player error: %v", result.Error)
+		}
+	})
+}
+
+func TestCreatePlayerWord(t *testing.T) {
+	if db == nil {
+		t.Skip("database not available")
+	}
+	ctx := context.Background()
+	WithRollback(db, func(tx *DB) {
+		board := boggle.Board{
+			{'a', 'b', 'c', 'd'},
+			{'e', 'f', 'g', 'h'},
+			{'i', 'j', 'k', 'l'},
+			{'m', 'n', 'o', 'p'},
+		}
+		var game Game
+		game.LoadBoard(board)
+		if result := db.WithContext(ctx).Create(&game); result.Error != nil {
+			t.Fatalf("create game error: %v", result.Error)
+		}
+
 		word := Word{
-			Game: &game,
-			Path: Path{{0, 0}, {1, 1}, {2, 2}},
+			GameID: game.ID,
+			Path:   Path{{0, 0}, {1, 1}, {2, 2}},
 		}
 		if result := db.WithContext(ctx).Create(&word); result.Error != nil {
 			t.Fatalf("create word error: %v", result.Error)
 		}
 
-		if result := db.WithContext(ctx).Find(&word); result.Error != nil {
-			t.Fatalf("select word error: %v", result.Error)
+		player := Player{Name: "John Doe"}
+		if result := db.WithContext(ctx).Create(&player); result.Error != nil {
+			t.Fatalf("create player error: %v", result.Error)
+		}
+
+		wordPlayer := WordPlayer{
+			WordID:   word.ID,
+			PlayerID: player.ID,
+		}
+		if result := db.WithContext(ctx).Create(&wordPlayer); result.Error != nil {
+			t.Fatalf("create wordplayer error: %v", result.Error)
 		}
 	})
 }

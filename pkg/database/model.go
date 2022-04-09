@@ -40,7 +40,7 @@ func (b Board) Value() (driver.Value, error) {
 }
 
 type Game struct {
-	ID    uint  `gorm:"primarykey;not null"`
+	ID    int   `gorm:"primaryKey;not null"`
 	Board Board `gorm:"not null;type:varchar(16)[16];check:cardinality(board) <= 16"`
 }
 
@@ -119,7 +119,22 @@ func (p Path) Value() (driver.Value, error) {
 }
 
 type Word struct {
-	GameID uint `gorm:"primarykey;not null"`
-	Game   *Game
-	Path   Path `gorm:"primarykey;not null"`
+	ID      int `gorm:"primaryKey;not null"`
+	GameID  int `gorm:"not null;uniqueKey:idx_word"`
+	Game    *Game
+	Path    Path     `gorm:"not null;uniqueKey:idx_word"`
+	Players []Player `gorm:"many2many:word_players"`
+}
+
+type Player struct {
+	ID    int    `gorm:"primaryKey;not null"`
+	Name  string `gorm:"not null"`
+	Words []Word `gorm:"many2many:word_players"`
+}
+
+type WordPlayer struct {
+	WordID   int `gorm:"primaryKey;not null"`
+	Word     *Word
+	PlayerID int `gorm:"primaryKey;not null"`
+	Player   *Player
 }

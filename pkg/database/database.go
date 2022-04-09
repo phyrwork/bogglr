@@ -20,5 +20,5 @@ func Open(dsn string) (*DB, error) {
 }
 
 func Migrate(db *DB) error {
-	return db.AutoMigrate(&Game{}, &Word{})
+	return db.AutoMigrate(&Game{}, &Word{}, &Player{}, &WordPlayer{})
 }
