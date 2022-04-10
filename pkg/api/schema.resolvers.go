@@ -85,6 +85,31 @@ func (r *mutationResolver) CreateWord(ctx context.Context, gameID string, path [
 	}, nil
 }
 
+func (r *playerResolver) Words(ctx context.Context, obj *model.Player) ([]*model.Word, error) {
+	var (
+		record database.Player
+		err    error
+	)
+	record.ID, err = strconv.Atoi(obj.ID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid word id '%s': %w", obj.ID, err)
+	}
+	err = r.DB.WithContext(ctx).Preload("Words").Find(&record).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, fmt.Errorf("player '%s' not found", obj.ID)
+	} else if err != nil {
+		return nil, fmt.Errorf("database error: %w", err)
+	}
+	return MapPointersOf(record.Words, func(record database.Word) model.Word {
+		return model.Word{
+			ID: strconv.Itoa(record.ID),
+			Path: MapOf(record.Path, func(record database.Point) model.Point {
+				return model.Point(record)
+			}),
+		}
+	}), nil
+}
+
 func (r *queryResolver) Player(ctx context.Context, id string) (*model.Player, error) {
 	var (
 		record database.Player
@@ -92,11 +117,11 @@ func (r *queryResolver) Player(ctx context.Context, id string) (*model.Player, e
 	)
 	record.ID, err = strconv.Atoi(id)
 	if err != nil {
-		return nil, fmt.Errorf("invalid id %s: %w", id, err)
+		return nil, fmt.Errorf("invalid player id '%s': %w", id, err)
 	}
 	err = r.DB.WithContext(ctx).First(&record).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, fmt.Errorf("game '%s' not found", id)
+		return nil, fmt.Errorf("player '%s' not found", id)
 	} else if err != nil {
 		return nil, fmt.Errorf("database error: %w", err)
 	}
@@ -117,7 +142,7 @@ func (r *queryResolver) Game(ctx context.Context, id string) (*model.Game, error
 	)
 	record.ID, err = strconv.Atoi(id)
 	if err != nil {
-		return nil, fmt.Errorf("invalid id %s: %w", id, err)
+		return nil, fmt.Errorf("invalid game id '%s': %w", id, err)
 	}
 	err = r.DB.WithContext(ctx).First(&record).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -136,7 +161,7 @@ func (r *queryResolver) Games(ctx context.Context, first *int, after *string) (*
 	if after != nil {
 		startCursor, err := strconv.Atoi(*after)
 		if err != nil {
-			return nil, fmt.Errorf("invalid start cursor %s: %w", *after, err)
+			return nil, fmt.Errorf("invalid start cursor '%s': %w", *after, err)
 		}
 		qry = qry.Where("id > ?", startCursor)
 	}
@@ -183,15 +208,67 @@ func (r *queryResolver) Words(ctx context.Context, gameID *string, playerID *str
 	panic(fmt.Errorf("not implemented"))
 }
 
+func (r *wordResolver) Game(ctx context.Context, obj *model.Word) (*model.Game, error) {
+	var (
+		record database.Word
+		err    error
+	)
+	record.ID, err = strconv.Atoi(obj.ID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid word id '%s': %w", obj.ID, err)
+	}
+	err = r.DB.WithContext(ctx).Preload("Game").Find(&record).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, fmt.Errorf("word '%s' not found", obj.ID)
+	} else if err != nil {
+		return nil, fmt.Errorf("database error: %w", err)
+	}
+	return &model.Game{
+		ID:    strconv.Itoa(record.Game.ID),
+		Board: record.Game.Board,
+	}, nil
+}
+
+func (r *wordResolver) Players(ctx context.Context, obj *model.Word) ([]*model.Player, error) {
+	var (
+		record database.Word
+		err    error
+	)
+	record.ID, err = strconv.Atoi(obj.ID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid word id '%s': %w", obj.ID, err)
+	}
+	err = r.DB.WithContext(ctx).Preload("Players").Find(&record).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, fmt.Errorf("word '%s' not found", obj.ID)
+	} else if err != nil {
+		return nil, fmt.Errorf("database error: %w", err)
+	}
+	return MapPointersOf(record.Players, func(record database.Player) model.Player {
+		return model.Player{
+			ID:   strconv.Itoa(record.ID),
+			Name: record.Name,
+		}
+	}), nil
+}
+
 // Game returns generated.GameResolver implementation.
 func (r *Resolver) Game() generated.GameResolver { return &gameResolver{r} }
 
 // Mutation returns generated.MutationResolver implementation.
 func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
 
+// Player returns generated.PlayerResolver implementation.
+func (r *Resolver) Player() generated.PlayerResolver { return &playerResolver{r} }
+
 // Query returns generated.QueryResolver implementation.
 func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 
+// Word returns generated.WordResolver implementation.
+func (r *Resolver) Word() generated.WordResolver { return &wordResolver{r} }
+
 type gameResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
+type playerResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
+type wordResolver struct{ *Resolver }

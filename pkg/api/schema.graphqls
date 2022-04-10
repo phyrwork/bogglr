@@ -1,4 +1,15 @@
-scalar Point
+directive @goModel(model: String, models: [String!]) on OBJECT
+  | INPUT_OBJECT
+  | SCALAR
+  | ENUM
+  | INTERFACE
+  | UNION
+
+directive @goField(forceResolver: Boolean, name: String) on INPUT_FIELD_DEFINITION
+  | FIELD_DEFINITION
+
+
+scalar Point @goModel(model: "github.com/phyrwork/bogglr/pkg/api/model.Point")
 
 type PageInfo {
   startCursor: ID!
@@ -9,7 +20,7 @@ type PageInfo {
 type Player {
   id: ID!
   name: String!
-  words: [Word!]!
+  words: [Word!]! @goField(forceResolver: true)
 }
 
 type PlayersConnection {
@@ -22,7 +33,7 @@ type PlayersEdge {
   node: Game
 }
 
-type Game {
+type Game @goModel(model: "github.com/phyrwork/bogglr/pkg/api/model.Game") {
   id: ID!
   board: [String!]!
 }
@@ -39,9 +50,9 @@ type GamesEdge {
 
 type Word {
   id: ID!
-  game: Game!
+  game: Game! @goField(forceResolver: true)
   path: [Point!]!
-  players: [Player!]!
+  players: [Player!]! @goField(forceResolver: true)
 }
 
 type WordsConnection {

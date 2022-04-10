@@ -37,7 +37,9 @@ type Config struct {
 type ResolverRoot interface {
 	Game() GameResolver
 	Mutation() MutationResolver
+	Player() PlayerResolver
 	Query() QueryResolver
+	Word() WordResolver
 }
 
 type DirectiveRoot struct {
@@ -121,12 +123,20 @@ type MutationResolver interface {
 	CreateGame(ctx context.Context, board []string) (*model.Game, error)
 	CreateWord(ctx context.Context, gameID string, path []model.Point) (*model.Word, error)
 }
+type PlayerResolver interface {
+	Words(ctx context.Context, obj *model.Player) ([]*model.Word, error)
+}
 type QueryResolver interface {
 	Player(ctx context.Context, id string) (*model.Player, error)
 	Players(ctx context.Context, first *int, after *string) (*model.PlayersConnection, error)
 	Game(ctx context.Context, id string) (*model.Game, error)
 	Games(ctx context.Context, first *int, after *string) (*model.GamesConnection, error)
 	Words(ctx context.Context, gameID *string, playerID *string, first *int, after *string) (*model.WordsConnection, error)
+}
+type WordResolver interface {
+	Game(ctx context.Context, obj *model.Word) (*model.Game, error)
+
+	Players(ctx context.Context, obj *model.Word) ([]*model.Player, error)
 }
 
 type executableSchema struct {
@@ -472,7 +482,18 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 }
 
 var sources = []*ast.Source{
-	{Name: "pkg/api/schema.graphqls", Input: `scalar Point
+	{Name: "pkg/api/schema.graphqls", Input: `directive @goModel(model: String, models: [String!]) on OBJECT
+  | INPUT_OBJECT
+  | SCALAR
+  | ENUM
+  | INTERFACE
+  | UNION
+
+directive @goField(forceResolver: Boolean, name: String) on INPUT_FIELD_DEFINITION
+  | FIELD_DEFINITION
+
+
+scalar Point @goModel(model: "github.com/phyrwork/bogglr/pkg/api/model.Point")
 
 type PageInfo {
   startCursor: ID!
@@ -483,7 +504,7 @@ type PageInfo {
 type Player {
   id: ID!
   name: String!
-  words: [Word!]!
+  words: [Word!]! @goField(forceResolver: true)
 }
 
 type PlayersConnection {
@@ -496,7 +517,7 @@ type PlayersEdge {
   node: Game
 }
 
-type Game {
+type Game @goModel(model: "github.com/phyrwork/bogglr/pkg/api/model.Game") {
   id: ID!
   board: [String!]!
 }
@@ -513,9 +534,9 @@ type GamesEdge {
 
 type Word {
   id: ID!
-  game: Game!
+  game: Game! @goField(forceResolver: true)
   path: [Point!]!
-  players: [Player!]!
+  players: [Player!]! @goField(forceResolver: true)
 }
 
 type WordsConnection {
@@ -1292,14 +1313,14 @@ func (ec *executionContext) _Player_words(ctx context.Context, field graphql.Col
 		Object:     "Player",
 		Field:      field,
 		Args:       nil,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Words, nil
+		return ec.resolvers.Player().Words(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1771,14 +1792,14 @@ func (ec *executionContext) _Word_game(ctx context.Context, field graphql.Collec
 		Object:     "Word",
 		Field:      field,
 		Args:       nil,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Game, nil
+		return ec.resolvers.Word().Game(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1841,14 +1862,14 @@ func (ec *executionContext) _Word_players(ctx context.Context, field graphql.Col
 		Object:     "Word",
 		Field:      field,
 		Args:       nil,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Players, nil
+		return ec.resolvers.Word().Players(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3452,7 +3473,7 @@ func (ec *executionContext) _Player(ctx context.Context, sel ast.SelectionSet, o
 			out.Values[i] = innerFunc(ctx)
 
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "name":
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
@@ -3462,18 +3483,28 @@ func (ec *executionContext) _Player(ctx context.Context, sel ast.SelectionSet, o
 			out.Values[i] = innerFunc(ctx)
 
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "words":
+			field := field
+
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Player_words(ctx, field, obj)
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Player_words(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
 			}
 
-			out.Values[i] = innerFunc(ctx)
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
 
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -3732,18 +3763,28 @@ func (ec *executionContext) _Word(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = innerFunc(ctx)
 
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "game":
+			field := field
+
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Word_game(ctx, field, obj)
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Word_game(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
 			}
 
-			out.Values[i] = innerFunc(ctx)
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
 
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			})
 		case "path":
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Word_path(ctx, field, obj)
@@ -3752,18 +3793,28 @@ func (ec *executionContext) _Word(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = innerFunc(ctx)
 
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "players":
+			field := field
+
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Word_players(ctx, field, obj)
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Word_players(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
 			}
 
-			out.Values[i] = innerFunc(ctx)
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
 
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -4910,6 +4961,44 @@ func (ec *executionContext) marshalOPlayersConnection2ᚖgithubᚗcomᚋphyrwork
 		return graphql.Null
 	}
 	return ec._PlayersConnection(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOString2ᚕstringᚄ(ctx context.Context, v interface{}) ([]string, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([]string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNString2string(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalOString2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNString2string(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalOString2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
