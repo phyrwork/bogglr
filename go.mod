@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/99designs/gqlgen v0.17.2
+	github.com/alecthomas/participle/v2 v2.0.0-alpha7
 	github.com/lib/pq v1.10.2
 	github.com/pkg/errors v0.8.1
 	github.com/stretchr/testify v1.7.1
@@ -14,7 +15,6 @@ require (
 
 require (
 	github.com/agnivade/levenshtein v1.1.0 // indirect
-	github.com/alecthomas/participle/v2 v2.0.0-alpha7 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect

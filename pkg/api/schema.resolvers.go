@@ -5,6 +5,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -13,6 +14,7 @@ import (
 	"github.com/phyrwork/bogglr/pkg/api/generated"
 	"github.com/phyrwork/bogglr/pkg/api/model"
 	"github.com/phyrwork/bogglr/pkg/database"
+	"gorm.io/gorm"
 )
 
 func (r *gameResolver) Board(ctx context.Context, obj *model.Game) ([]string, error) {
@@ -23,6 +25,17 @@ func (r *gameResolver) Board(ctx context.Context, obj *model.Game) ([]string, er
 		return nil, err
 	}
 	return obj.Board, nil
+}
+
+func (r *mutationResolver) CreatePlayer(ctx context.Context, name string) (*model.Player, error) {
+	record := database.Player{Name: name}
+	if err := r.DB.WithContext(ctx).Create(&record).Error; err != nil {
+		return nil, fmt.Errorf("database error: %w", err)
+	}
+	return &model.Player{
+		ID:   strconv.Itoa(record.ID),
+		Name: record.Name,
+	}, nil
 }
 
 func (r *mutationResolver) CreateGame(ctx context.Context, board []string) (*model.Game, error) {
@@ -50,6 +63,72 @@ func (r *mutationResolver) CreateGame(ctx context.Context, board []string) (*mod
 		Board: board,
 	}
 	return &obj, nil
+}
+
+func (r *mutationResolver) CreateWord(ctx context.Context, gameID string, path []model.Point) (*model.Word, error) {
+	game, err := r.Query().Game(ctx, gameID)
+	if err != nil {
+		return nil, err
+	}
+	var record database.Word
+	record.GameID, err = strconv.Atoi(game.ID)
+	record.Path = MapOf(path, func(point model.Point) database.Point {
+		return database.Point(point)
+	})
+	if err := r.DB.WithContext(ctx).Create(&record).Error; err != nil {
+		return nil, fmt.Errorf("database error: %w", err)
+	}
+	return &model.Word{
+		ID:   strconv.Itoa(record.ID),
+		Game: game,
+		Path: path,
+	}, nil
+}
+
+func (r *queryResolver) Player(ctx context.Context, id string) (*model.Player, error) {
+	var (
+		record database.Player
+		err    error
+	)
+	record.ID, err = strconv.Atoi(id)
+	if err != nil {
+		return nil, fmt.Errorf("invalid id %s: %w", id, err)
+	}
+	err = r.DB.WithContext(ctx).First(&record).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, fmt.Errorf("game '%s' not found", id)
+	} else if err != nil {
+		return nil, fmt.Errorf("database error: %w", err)
+	}
+	return &model.Player{
+		ID:   strconv.Itoa(record.ID),
+		Name: record.Name,
+	}, nil
+}
+
+func (r *queryResolver) Players(ctx context.Context, first *int, after *string) (*model.PlayersConnection, error) {
+	panic(fmt.Errorf("not implemented"))
+}
+
+func (r *queryResolver) Game(ctx context.Context, id string) (*model.Game, error) {
+	var (
+		record database.Game
+		err    error
+	)
+	record.ID, err = strconv.Atoi(id)
+	if err != nil {
+		return nil, fmt.Errorf("invalid id %s: %w", id, err)
+	}
+	err = r.DB.WithContext(ctx).First(&record).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, fmt.Errorf("game '%s' not found", id)
+	} else if err != nil {
+		return nil, fmt.Errorf("database error: %w", err)
+	}
+	return &model.Game{
+		ID:    strconv.Itoa(record.ID),
+		Board: record.Board,
+	}, nil
 }
 
 func (r *queryResolver) Games(ctx context.Context, first *int, after *string) (*model.GamesConnection, error) {
@@ -98,6 +177,10 @@ func (r *queryResolver) Games(ctx context.Context, first *int, after *string) (*
 		Edges:    edges,
 		PageInfo: &pageInfo,
 	}, nil
+}
+
+func (r *queryResolver) Words(ctx context.Context, gameID *string, playerID *string, first *int, after *string) (*model.WordsConnection, error) {
+	panic(fmt.Errorf("not implemented"))
 }
 
 // Game returns generated.GameResolver implementation.

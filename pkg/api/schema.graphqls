@@ -1,7 +1,25 @@
+scalar Point
+
 type PageInfo {
   startCursor: ID!
   endCursor: ID!
   hasNextPage: Boolean
+}
+
+type Player {
+  id: ID!
+  name: String!
+  words: [Word!]!
+}
+
+type PlayersConnection {
+  edges: [Player!]!
+  pageInfo: PageInfo!
+}
+
+type PlayersEdge {
+  cursor: ID!
+  node: Game
 }
 
 type Game {
@@ -10,7 +28,7 @@ type Game {
 }
 
 type GamesConnection {
-  edges: [Game!]!
+  edges: [Game!]!  # TODO: pretty sure this should have been GameEdge; same elsewhere...
   pageInfo: PageInfo!
 }
 
@@ -19,10 +37,33 @@ type GamesEdge {
   node: Game
 }
 
+type Word {
+  id: ID!
+  game: Game!
+  path: [Point!]!
+  players: [Player!]!
+}
+
+type WordsConnection {
+  edges: [Word!]!
+  pageInfo: PageInfo!
+}
+
+type WordsEdge {
+  cursor: ID!
+  node: Word
+}
+
 type Query {
+  player(id: ID!): Player!
+  players(first: Int = 20, after: ID):  PlayersConnection
+  game(id: ID!): Game!
   games(first: Int = 20, after: ID): GamesConnection
+  words(gameId: ID, playerId: ID, first: Int = 20, after: ID): WordsConnection
 }
 
 type Mutation {
+  createPlayer(name: String!): Player!
   createGame(board: [String!]!): Game!
+  createWord(gameId: ID!, path: [Point!]!): Word!
 }

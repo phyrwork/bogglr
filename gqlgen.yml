@@ -57,3 +57,6 @@ models:
   Game:
     model:
       - github.com/phyrwork/bogglr/pkg/api/model.Game
+  Point:
+    model:
+      - github.com/phyrwork/bogglr/pkg/api/model.Point

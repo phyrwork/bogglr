@@ -60,7 +60,9 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		CreateGame func(childComplexity int, board []string) int
+		CreateGame   func(childComplexity int, board []string) int
+		CreatePlayer func(childComplexity int, name string) int
+		CreateWord   func(childComplexity int, gameID string, path []model.Point) int
 	}
 
 	PageInfo struct {
@@ -69,8 +71,45 @@ type ComplexityRoot struct {
 		StartCursor func(childComplexity int) int
 	}
 
+	Player struct {
+		ID    func(childComplexity int) int
+		Name  func(childComplexity int) int
+		Words func(childComplexity int) int
+	}
+
+	PlayersConnection struct {
+		Edges    func(childComplexity int) int
+		PageInfo func(childComplexity int) int
+	}
+
+	PlayersEdge struct {
+		Cursor func(childComplexity int) int
+		Node   func(childComplexity int) int
+	}
+
 	Query struct {
-		Games func(childComplexity int, first *int, after *string) int
+		Game    func(childComplexity int, id string) int
+		Games   func(childComplexity int, first *int, after *string) int
+		Player  func(childComplexity int, id string) int
+		Players func(childComplexity int, first *int, after *string) int
+		Words   func(childComplexity int, gameID *string, playerID *string, first *int, after *string) int
+	}
+
+	Word struct {
+		Game    func(childComplexity int) int
+		ID      func(childComplexity int) int
+		Path    func(childComplexity int) int
+		Players func(childComplexity int) int
+	}
+
+	WordsConnection struct {
+		Edges    func(childComplexity int) int
+		PageInfo func(childComplexity int) int
+	}
+
+	WordsEdge struct {
+		Cursor func(childComplexity int) int
+		Node   func(childComplexity int) int
 	}
 }
 
@@ -78,10 +117,16 @@ type GameResolver interface {
 	Board(ctx context.Context, obj *model.Game) ([]string, error)
 }
 type MutationResolver interface {
+	CreatePlayer(ctx context.Context, name string) (*model.Player, error)
 	CreateGame(ctx context.Context, board []string) (*model.Game, error)
+	CreateWord(ctx context.Context, gameID string, path []model.Point) (*model.Word, error)
 }
 type QueryResolver interface {
+	Player(ctx context.Context, id string) (*model.Player, error)
+	Players(ctx context.Context, first *int, after *string) (*model.PlayersConnection, error)
+	Game(ctx context.Context, id string) (*model.Game, error)
 	Games(ctx context.Context, first *int, after *string) (*model.GamesConnection, error)
+	Words(ctx context.Context, gameID *string, playerID *string, first *int, after *string) (*model.WordsConnection, error)
 }
 
 type executableSchema struct {
@@ -153,6 +198,30 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.CreateGame(childComplexity, args["board"].([]string)), true
 
+	case "Mutation.createPlayer":
+		if e.complexity.Mutation.CreatePlayer == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createPlayer_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CreatePlayer(childComplexity, args["name"].(string)), true
+
+	case "Mutation.createWord":
+		if e.complexity.Mutation.CreateWord == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createWord_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CreateWord(childComplexity, args["gameId"].(string), args["path"].([]model.Point)), true
+
 	case "PageInfo.endCursor":
 		if e.complexity.PageInfo.EndCursor == nil {
 			break
@@ -174,6 +243,67 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.PageInfo.StartCursor(childComplexity), true
 
+	case "Player.id":
+		if e.complexity.Player.ID == nil {
+			break
+		}
+
+		return e.complexity.Player.ID(childComplexity), true
+
+	case "Player.name":
+		if e.complexity.Player.Name == nil {
+			break
+		}
+
+		return e.complexity.Player.Name(childComplexity), true
+
+	case "Player.words":
+		if e.complexity.Player.Words == nil {
+			break
+		}
+
+		return e.complexity.Player.Words(childComplexity), true
+
+	case "PlayersConnection.edges":
+		if e.complexity.PlayersConnection.Edges == nil {
+			break
+		}
+
+		return e.complexity.PlayersConnection.Edges(childComplexity), true
+
+	case "PlayersConnection.pageInfo":
+		if e.complexity.PlayersConnection.PageInfo == nil {
+			break
+		}
+
+		return e.complexity.PlayersConnection.PageInfo(childComplexity), true
+
+	case "PlayersEdge.cursor":
+		if e.complexity.PlayersEdge.Cursor == nil {
+			break
+		}
+
+		return e.complexity.PlayersEdge.Cursor(childComplexity), true
+
+	case "PlayersEdge.node":
+		if e.complexity.PlayersEdge.Node == nil {
+			break
+		}
+
+		return e.complexity.PlayersEdge.Node(childComplexity), true
+
+	case "Query.game":
+		if e.complexity.Query.Game == nil {
+			break
+		}
+
+		args, err := ec.field_Query_game_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Game(childComplexity, args["id"].(string)), true
+
 	case "Query.games":
 		if e.complexity.Query.Games == nil {
 			break
@@ -185,6 +315,98 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.Games(childComplexity, args["first"].(*int), args["after"].(*string)), true
+
+	case "Query.player":
+		if e.complexity.Query.Player == nil {
+			break
+		}
+
+		args, err := ec.field_Query_player_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Player(childComplexity, args["id"].(string)), true
+
+	case "Query.players":
+		if e.complexity.Query.Players == nil {
+			break
+		}
+
+		args, err := ec.field_Query_players_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Players(childComplexity, args["first"].(*int), args["after"].(*string)), true
+
+	case "Query.words":
+		if e.complexity.Query.Words == nil {
+			break
+		}
+
+		args, err := ec.field_Query_words_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Words(childComplexity, args["gameId"].(*string), args["playerId"].(*string), args["first"].(*int), args["after"].(*string)), true
+
+	case "Word.game":
+		if e.complexity.Word.Game == nil {
+			break
+		}
+
+		return e.complexity.Word.Game(childComplexity), true
+
+	case "Word.id":
+		if e.complexity.Word.ID == nil {
+			break
+		}
+
+		return e.complexity.Word.ID(childComplexity), true
+
+	case "Word.path":
+		if e.complexity.Word.Path == nil {
+			break
+		}
+
+		return e.complexity.Word.Path(childComplexity), true
+
+	case "Word.players":
+		if e.complexity.Word.Players == nil {
+			break
+		}
+
+		return e.complexity.Word.Players(childComplexity), true
+
+	case "WordsConnection.edges":
+		if e.complexity.WordsConnection.Edges == nil {
+			break
+		}
+
+		return e.complexity.WordsConnection.Edges(childComplexity), true
+
+	case "WordsConnection.pageInfo":
+		if e.complexity.WordsConnection.PageInfo == nil {
+			break
+		}
+
+		return e.complexity.WordsConnection.PageInfo(childComplexity), true
+
+	case "WordsEdge.cursor":
+		if e.complexity.WordsEdge.Cursor == nil {
+			break
+		}
+
+		return e.complexity.WordsEdge.Cursor(childComplexity), true
+
+	case "WordsEdge.node":
+		if e.complexity.WordsEdge.Node == nil {
+			break
+		}
+
+		return e.complexity.WordsEdge.Node(childComplexity), true
 
 	}
 	return 0, false
@@ -250,10 +472,28 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 }
 
 var sources = []*ast.Source{
-	{Name: "pkg/api/schema.graphqls", Input: `type PageInfo {
+	{Name: "pkg/api/schema.graphqls", Input: `scalar Point
+
+type PageInfo {
   startCursor: ID!
   endCursor: ID!
   hasNextPage: Boolean
+}
+
+type Player {
+  id: ID!
+  name: String!
+  words: [Word!]!
+}
+
+type PlayersConnection {
+  edges: [Player!]!
+  pageInfo: PageInfo!
+}
+
+type PlayersEdge {
+  cursor: ID!
+  node: Game
 }
 
 type Game {
@@ -262,7 +502,7 @@ type Game {
 }
 
 type GamesConnection {
-  edges: [Game!]!
+  edges: [Game!]!  # TODO: pretty sure this should have been GameEdge; same elsewhere...
   pageInfo: PageInfo!
 }
 
@@ -271,12 +511,35 @@ type GamesEdge {
   node: Game
 }
 
+type Word {
+  id: ID!
+  game: Game!
+  path: [Point!]!
+  players: [Player!]!
+}
+
+type WordsConnection {
+  edges: [Word!]!
+  pageInfo: PageInfo!
+}
+
+type WordsEdge {
+  cursor: ID!
+  node: Word
+}
+
 type Query {
+  player(id: ID!): Player!
+  players(first: Int = 20, after: ID):  PlayersConnection
+  game(id: ID!): Game!
   games(first: Int = 20, after: ID): GamesConnection
+  words(gameId: ID, playerId: ID, first: Int = 20, after: ID): WordsConnection
 }
 
 type Mutation {
+  createPlayer(name: String!): Player!
   createGame(board: [String!]!): Game!
+  createWord(gameId: ID!, path: [Point!]!): Word!
 }
 `, BuiltIn: false},
 }
@@ -301,6 +564,45 @@ func (ec *executionContext) field_Mutation_createGame_args(ctx context.Context, 
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_createPlayer_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["name"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_createWord_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["gameId"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("gameId"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["gameId"] = arg0
+	var arg1 []model.Point
+	if tmp, ok := rawArgs["path"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("path"))
+		arg1, err = ec.unmarshalNPoint2ᚕgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐPointᚄ(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["path"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -313,6 +615,21 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 		}
 	}
 	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_game_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
 	return args, nil
 }
 
@@ -337,6 +654,87 @@ func (ec *executionContext) field_Query_games_args(ctx context.Context, rawArgs 
 		}
 	}
 	args["after"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_player_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_players_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *int
+	if tmp, ok := rawArgs["first"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("first"))
+		arg0, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["first"] = arg0
+	var arg1 *string
+	if tmp, ok := rawArgs["after"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("after"))
+		arg1, err = ec.unmarshalOID2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["after"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_words_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *string
+	if tmp, ok := rawArgs["gameId"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("gameId"))
+		arg0, err = ec.unmarshalOID2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["gameId"] = arg0
+	var arg1 *string
+	if tmp, ok := rawArgs["playerId"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("playerId"))
+		arg1, err = ec.unmarshalOID2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["playerId"] = arg1
+	var arg2 *int
+	if tmp, ok := rawArgs["first"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("first"))
+		arg2, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["first"] = arg2
+	var arg3 *string
+	if tmp, ok := rawArgs["after"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("after"))
+		arg3, err = ec.unmarshalOID2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["after"] = arg3
 	return args, nil
 }
 
@@ -585,6 +983,48 @@ func (ec *executionContext) _GamesEdge_node(ctx context.Context, field graphql.C
 	return ec.marshalOGame2ᚖgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐGame(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Mutation_createPlayer(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_createPlayer_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().CreatePlayer(rctx, args["name"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Player)
+	fc.Result = res
+	return ec.marshalNPlayer2ᚖgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐPlayer(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Mutation_createGame(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -625,6 +1065,48 @@ func (ec *executionContext) _Mutation_createGame(ctx context.Context, field grap
 	res := resTmp.(*model.Game)
 	fc.Result = res
 	return ec.marshalNGame2ᚖgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐGame(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_createWord(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_createWord_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().CreateWord(rctx, args["gameId"].(string), args["path"].([]model.Point))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Word)
+	fc.Result = res
+	return ec.marshalNWord2ᚖgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐWord(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _PageInfo_startCursor(ctx context.Context, field graphql.CollectedField, obj *model.PageInfo) (ret graphql.Marshaler) {
@@ -729,6 +1211,371 @@ func (ec *executionContext) _PageInfo_hasNextPage(ctx context.Context, field gra
 	return ec.marshalOBoolean2ᚖbool(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Player_id(ctx context.Context, field graphql.CollectedField, obj *model.Player) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Player",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Player_name(ctx context.Context, field graphql.CollectedField, obj *model.Player) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Player",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Player_words(ctx context.Context, field graphql.CollectedField, obj *model.Player) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Player",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Words, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Word)
+	fc.Result = res
+	return ec.marshalNWord2ᚕᚖgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐWordᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _PlayersConnection_edges(ctx context.Context, field graphql.CollectedField, obj *model.PlayersConnection) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "PlayersConnection",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Edges, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Player)
+	fc.Result = res
+	return ec.marshalNPlayer2ᚕᚖgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐPlayerᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _PlayersConnection_pageInfo(ctx context.Context, field graphql.CollectedField, obj *model.PlayersConnection) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "PlayersConnection",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PageInfo, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.PageInfo)
+	fc.Result = res
+	return ec.marshalNPageInfo2ᚖgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐPageInfo(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _PlayersEdge_cursor(ctx context.Context, field graphql.CollectedField, obj *model.PlayersEdge) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "PlayersEdge",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Cursor, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _PlayersEdge_node(ctx context.Context, field graphql.CollectedField, obj *model.PlayersEdge) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "PlayersEdge",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Node, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.Game)
+	fc.Result = res
+	return ec.marshalOGame2ᚖgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐGame(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_player(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_player_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Player(rctx, args["id"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Player)
+	fc.Result = res
+	return ec.marshalNPlayer2ᚖgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐPlayer(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_players(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_players_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Players(rctx, args["first"].(*int), args["after"].(*string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.PlayersConnection)
+	fc.Result = res
+	return ec.marshalOPlayersConnection2ᚖgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐPlayersConnection(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_game(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_game_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Game(rctx, args["id"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Game)
+	fc.Result = res
+	return ec.marshalNGame2ᚖgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐGame(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Query_games(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -766,6 +1613,45 @@ func (ec *executionContext) _Query_games(ctx context.Context, field graphql.Coll
 	res := resTmp.(*model.GamesConnection)
 	fc.Result = res
 	return ec.marshalOGamesConnection2ᚖgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐGamesConnection(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_words(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_words_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Words(rctx, args["gameId"].(*string), args["playerId"].(*string), args["first"].(*int), args["after"].(*string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.WordsConnection)
+	fc.Result = res
+	return ec.marshalOWordsConnection2ᚖgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐWordsConnection(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -837,6 +1723,283 @@ func (ec *executionContext) _Query___schema(ctx context.Context, field graphql.C
 	res := resTmp.(*introspection.Schema)
 	fc.Result = res
 	return ec.marshalO__Schema2ᚖgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐSchema(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Word_id(ctx context.Context, field graphql.CollectedField, obj *model.Word) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Word",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Word_game(ctx context.Context, field graphql.CollectedField, obj *model.Word) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Word",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Game, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Game)
+	fc.Result = res
+	return ec.marshalNGame2ᚖgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐGame(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Word_path(ctx context.Context, field graphql.CollectedField, obj *model.Word) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Word",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Path, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]model.Point)
+	fc.Result = res
+	return ec.marshalNPoint2ᚕgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐPointᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Word_players(ctx context.Context, field graphql.CollectedField, obj *model.Word) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Word",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Players, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Player)
+	fc.Result = res
+	return ec.marshalNPlayer2ᚕᚖgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐPlayerᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _WordsConnection_edges(ctx context.Context, field graphql.CollectedField, obj *model.WordsConnection) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "WordsConnection",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Edges, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Word)
+	fc.Result = res
+	return ec.marshalNWord2ᚕᚖgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐWordᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _WordsConnection_pageInfo(ctx context.Context, field graphql.CollectedField, obj *model.WordsConnection) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "WordsConnection",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PageInfo, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.PageInfo)
+	fc.Result = res
+	return ec.marshalNPageInfo2ᚖgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐPageInfo(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _WordsEdge_cursor(ctx context.Context, field graphql.CollectedField, obj *model.WordsEdge) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "WordsEdge",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Cursor, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _WordsEdge_node(ctx context.Context, field graphql.CollectedField, obj *model.WordsEdge) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "WordsEdge",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Node, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.Word)
+	fc.Result = res
+	return ec.marshalOWord2ᚖgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐWord(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) ___Directive_name(ctx context.Context, field graphql.CollectedField, obj *introspection.Directive) (ret graphql.Marshaler) {
@@ -2182,9 +3345,29 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Mutation")
+		case "createPlayer":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createPlayer(ctx, field)
+			}
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, innerFunc)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "createGame":
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_createGame(ctx, field)
+			}
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, innerFunc)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "createWord":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createWord(ctx, field)
 			}
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, innerFunc)
@@ -2251,6 +3434,136 @@ func (ec *executionContext) _PageInfo(ctx context.Context, sel ast.SelectionSet,
 	return out
 }
 
+var playerImplementors = []string{"Player"}
+
+func (ec *executionContext) _Player(ctx context.Context, sel ast.SelectionSet, obj *model.Player) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, playerImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Player")
+		case "id":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Player_id(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "name":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Player_name(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "words":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Player_words(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var playersConnectionImplementors = []string{"PlayersConnection"}
+
+func (ec *executionContext) _PlayersConnection(ctx context.Context, sel ast.SelectionSet, obj *model.PlayersConnection) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, playersConnectionImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PlayersConnection")
+		case "edges":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._PlayersConnection_edges(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "pageInfo":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._PlayersConnection_pageInfo(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var playersEdgeImplementors = []string{"PlayersEdge"}
+
+func (ec *executionContext) _PlayersEdge(ctx context.Context, sel ast.SelectionSet, obj *model.PlayersEdge) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, playersEdgeImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PlayersEdge")
+		case "cursor":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._PlayersEdge_cursor(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "node":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._PlayersEdge_node(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var queryImplementors = []string{"Query"}
 
 func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
@@ -2270,6 +3583,72 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Query")
+		case "player":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_player(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
+		case "players":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_players(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
+		case "game":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_game(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
 		case "games":
 			field := field
 
@@ -2280,6 +3659,26 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_games(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
+		case "words":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_words(ctx, field)
 				return res
 			}
 
@@ -2303,6 +3702,146 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, innerFunc)
+
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var wordImplementors = []string{"Word"}
+
+func (ec *executionContext) _Word(ctx context.Context, sel ast.SelectionSet, obj *model.Word) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, wordImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Word")
+		case "id":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Word_id(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "game":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Word_game(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "path":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Word_path(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "players":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Word_players(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var wordsConnectionImplementors = []string{"WordsConnection"}
+
+func (ec *executionContext) _WordsConnection(ctx context.Context, sel ast.SelectionSet, obj *model.WordsConnection) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, wordsConnectionImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("WordsConnection")
+		case "edges":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._WordsConnection_edges(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "pageInfo":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._WordsConnection_pageInfo(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var wordsEdgeImplementors = []string{"WordsEdge"}
+
+func (ec *executionContext) _WordsEdge(ctx context.Context, sel ast.SelectionSet, obj *model.WordsEdge) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, wordsEdgeImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("WordsEdge")
+		case "cursor":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._WordsEdge_cursor(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "node":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._WordsEdge_node(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
 
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -2836,6 +4375,106 @@ func (ec *executionContext) marshalNPageInfo2ᚖgithubᚗcomᚋphyrworkᚋbogglr
 	return ec._PageInfo(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNPlayer2githubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐPlayer(ctx context.Context, sel ast.SelectionSet, v model.Player) graphql.Marshaler {
+	return ec._Player(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNPlayer2ᚕᚖgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐPlayerᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Player) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNPlayer2ᚖgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐPlayer(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNPlayer2ᚖgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐPlayer(ctx context.Context, sel ast.SelectionSet, v *model.Player) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._Player(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNPoint2githubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐPoint(ctx context.Context, v interface{}) (model.Point, error) {
+	var res model.Point
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNPoint2githubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐPoint(ctx context.Context, sel ast.SelectionSet, v model.Point) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalNPoint2ᚕgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐPointᚄ(ctx context.Context, v interface{}) ([]model.Point, error) {
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([]model.Point, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNPoint2githubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐPoint(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNPoint2ᚕgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐPointᚄ(ctx context.Context, sel ast.SelectionSet, v []model.Point) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNPoint2githubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐPoint(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {
 	res, err := graphql.UnmarshalString(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -2881,6 +4520,64 @@ func (ec *executionContext) marshalNString2ᚕstringᚄ(ctx context.Context, sel
 	}
 
 	return ret
+}
+
+func (ec *executionContext) marshalNWord2githubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐWord(ctx context.Context, sel ast.SelectionSet, v model.Word) graphql.Marshaler {
+	return ec._Word(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNWord2ᚕᚖgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐWordᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Word) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNWord2ᚖgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐWord(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNWord2ᚖgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐWord(ctx context.Context, sel ast.SelectionSet, v *model.Word) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._Word(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx context.Context, sel ast.SelectionSet, v introspection.Directive) graphql.Marshaler {
@@ -3208,6 +4905,13 @@ func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.Sele
 	return res
 }
 
+func (ec *executionContext) marshalOPlayersConnection2ᚖgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐPlayersConnection(ctx context.Context, sel ast.SelectionSet, v *model.PlayersConnection) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._PlayersConnection(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalOString2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
 	if v == nil {
 		return nil, nil
@@ -3222,6 +4926,20 @@ func (ec *executionContext) marshalOString2ᚖstring(ctx context.Context, sel as
 	}
 	res := graphql.MarshalString(*v)
 	return res
+}
+
+func (ec *executionContext) marshalOWord2ᚖgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐWord(ctx context.Context, sel ast.SelectionSet, v *model.Word) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Word(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOWordsConnection2ᚖgithubᚗcomᚋphyrworkᚋbogglrᚋpkgᚋapiᚋmodelᚐWordsConnection(ctx context.Context, sel ast.SelectionSet, v *model.WordsConnection) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._WordsConnection(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalO__EnumValue2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐEnumValueᚄ(ctx context.Context, sel ast.SelectionSet, v []introspection.EnumValue) graphql.Marshaler {

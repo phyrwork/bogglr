@@ -17,3 +17,36 @@ type PageInfo struct {
 	EndCursor   string `json:"endCursor"`
 	HasNextPage *bool  `json:"hasNextPage"`
 }
+
+type Player struct {
+	ID    string  `json:"id"`
+	Name  string  `json:"name"`
+	Words []*Word `json:"words"`
+}
+
+type PlayersConnection struct {
+	Edges    []*Player `json:"edges"`
+	PageInfo *PageInfo `json:"pageInfo"`
+}
+
+type PlayersEdge struct {
+	Cursor string `json:"cursor"`
+	Node   *Game  `json:"node"`
+}
+
+type Word struct {
+	ID      string    `json:"id"`
+	Game    *Game     `json:"game"`
+	Path    []Point   `json:"path"`
+	Players []*Player `json:"players"`
+}
+
+type WordsConnection struct {
+	Edges    []*Word   `json:"edges"`
+	PageInfo *PageInfo `json:"pageInfo"`
+}
+
+type WordsEdge struct {
+	Cursor string `json:"cursor"`
+	Node   *Word  `json:"node"`
+}
